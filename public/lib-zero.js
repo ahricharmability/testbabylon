@@ -1,29 +1,56 @@
+
+
+const { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight,
+  Mesh, MeshBuilder, FreeCamera, Color4, StandardMaterial, Color3,
+  PointLight, ShadowGenerator, Quaternion, Matrix } = BABYLON;
+const { AdvancedDynamicTexture, Button, Control } = BABYLON.GUI;
+
 // -- CONFIG --------------------------------------
 
 const maindiv = "appkanvas";
 
 // ------------------------------------------------
 
-const appstate = {
-  START:0,
-  CUTSCENE:1,
-  GAME:2,
-  LOST:3
+const State = {
+  START: 0,
+  GAME: 1,
+  LOSE: 2,
+  CUTSCENE: 3
 };
 if (Object.freeze) Object.freeze(appstate);
 
-class LibZero {
-  #state;
+class App {
   #scene;
   #kanvas;
   #engine;
 
+  #state;
   #gameScene;
   #cutScene;
 
+  let assets;
+  #environment;
+  #player;
+
   constructor() {
-    // LOAD CONFIG
-    this.#state = appstate.START;
+    this.#state = State.START;
+    
+    this.#kanvas = this.#createCanvas();
+    this.#engine = new Engine(this.#kanvas, true);
+    this.#scene = new Scene(this.#engine);
+    
+    window.addEventListener("keydown", (ev) => {
+      // Shift + Ctrl + Alt + I
+      if (ev.shiftKey && ev.ctrlKey && ev.altKey && ev.keyCode === 73) {
+        if (this.#scene.debugLayer.isVisible()) {
+          this.#scene.debugLayer.hide();
+        } else {
+          this.#scene.debugLayer.show();
+        }
+      }
+    });
+
+    this.#main();
   }
 
   loadConfig() {
@@ -49,67 +76,58 @@ class LibZero {
     kanvas.id = "kanvas";
     const element = document.getElementById(div);
     element.appendChild(kanvas);
-    return kanvas;
+    this.#kanvas = kanvas;
+    return this.#kanvas;
   }
 
-  init() {
-    console.log("!!!!! lib-zero init !!!!!");
-    this.#kanvas = this.#createCanvas(maindiv);
-    this.#engine = new BABYLON.Engine(this.#kanvas, true);
-    this.#scene = new BABYLON.Scene(this.#engine);
-    //const scene = createScene();
-  
-    let camera = new BABYLON.ArcRotateCamera("Camera",
-      Math.PI / 2, Math.PI / 2, 2, 
-      BABYLON.Vector3.Zero(), this.#scene);
-    camera.attachControl(this.#kanvas, true);
-    let light1 = new BABYLON.HemisphericLight("light1", 
-      new BABYLON.Vector3(1, 1, 0), this.#scene);
-    let sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 1 }, this.#scene);
- 
-    this.#gotoStart();
+  #main() {
+    await this.#gotoStart();
 
-    window.addEventListener("keydown", (ev) => {
-      if (ev.shiftKey && ev.ctrlKey && ev.altKey && ev.keyCode === 73) {
-        if (this.#scene.debugLayer.isVisible()) {
-          this.#scene.debugLayer.hide();
-        } else {
-          this.#scene.debugLayer.show();
-        }
+    this.#engine.runRenderLoop(() => {
+      switch (this.#state) {
+        case appstate.START:
+          this.#scene.render();
+          break;
+        case appstate.CUTSCENE:
+          this.#scene.render();
+          break;
+        case appstate.GAME:
+          this.#scene.render();
+          break;
+        case appstate.LOSE:
+          this.#scene.render();
+          break;
+        default: break;
       }
     });
+
 
     window.addEventListener("resize", () => {
       this.#engine.resize();
       console.log(`resize ${new Date()}`);
     });
-  }
 
-  loop() {
-    this.#engine.runRenderLoop(() => {
-      this.#scene.render();
-    });
   }
 
   async #gotoStart() {
     console.log("gotoStart");
     this.#engine.displayLoadingUI();
     this.#scene.detachControl();
-    let scene = new BABYLON.Scene(this.#engine);
-    scene.clearColor = new BABYLON.Color4(0,0,0,1)
-    let camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0,0,0), scene);
-    camera.setTarget(BABYLON.Vector3.Zero());
+    let scene = new Scene(this.#engine);
+    scene.clearColor = new Color4(0,0,0,1)
+    let camera = new FreeCamera("camera1", new Vector3(0,0,0), scene);
+    camera.setTarget(Vector3.Zero());
 
-    const guiMenu = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    const guiMenu = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     guiMenu.idealHeight = 720;
 
-    const startBtn = BABYLON.GUI.Button.CreateSimpleButton("start", "PLAY");
+    const startBtn = Button.CreateSimpleButton("start", "PLAY");
     startBtn.width = 0.2;
     startBtn.height = "40px";
     startBtn.color = "white";
     startBtn.top = "-14px";
     startBtn.thickness = 0;
-    startBtn.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    startBtn.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
     guiMenu.addControl(startBtn);
 
     startBtn.onPointerDownObservable.add(() => {
@@ -122,25 +140,25 @@ class LibZero {
     this.#engine.hideLoadingUI();
     this.#scene.dispose();
     this.#scene = scene;
-    this.#state = appstate.START;
+    this.#state = State.START;
   }
 
   async #gotoCutScene() {
     console.log("gotoCutScene");
     this.#engine.displayLoadingUI();
     this.#scene.detachControl();
-    this.#cutScene = new BABYLON.Scene(this.#engine);
-    let camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0,0,0), this.#cutScene);
-    camera.setTarget(BABYLON.Vector3.Zero());
-    this.#cutScene.clearColor = new BABYLON.Color4(0,0,0,1);
+    this.#cutScene = new Scene(this.#engine);
+    let camera = new FreeCamera("camera1", new Vector3(0,0,0), this.#cutScene);
+    camera.setTarget(Vector3.Zero());
+    this.#cutScene.clearColor = new Color4(0,0,0,1);
 
-    const cutScene = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("cutscene");
+    const cutScene = AdvancedDynamicTexture.CreateFullscreenUI("cutscene");
 
-    const next = BABYLON.GUI.Button.CreateSimpleButton("next", "NEXT");
+    const next = Button.CreateSimpleButton("next", "NEXT");
     next.color = "white";
     next.thickness = 0;
-    next.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    next.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    next.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    next.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
     next.width = "64px";
     next.height = "64px";
     next.top = "-3%";
@@ -163,24 +181,40 @@ class LibZero {
     });
   }
 
+  async #setupGame() {
+    console.log("setupGame");
+    let scene = new Scene(this.#engine);
+    this.#gameScene = scene;
+
+    const environment = new Environment(scene);
+    this.#environment = environment;
+    await this.#environment.load();
+    await this.#loadCharacterAssets(scene);
+
+  }
+
+  async #loadCharacterAssets(scene) {
+
+  }
+
   async #gotoGame() {
     console.log("gotoGame");
     this.#scene.detachControl();
     let scene = this.#gameScene;
-    scene.clearColor = new BABYLON.Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098);
-    let camera = new BABYLON.ArcRotateCamera("camera", Math.PI/2, Math.PI/2, 2, BABYLON.Vector3.Zero(), scene);
-    camera.setTarget(BABYLON.Vector3.Zero());
+    scene.clearColor = new Color4(0.01568627450980392, 0.01568627450980392, 0.20392156862745098);
+    let camera = new ArcRotateCamera("camera", Math.PI/2, Math.PI/2, 2, BABYLON.Vector3.Zero(), scene);
+    camera.setTarget(Vector3.Zero());
 
-    const playerUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    const playerUI = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     scene.detachControl();
 
-    const loseBtn = BABYLON.GUI.Button.CreateSimpleButton("lose", "LOSE");
+    const loseBtn = Button.CreateSimpleButton("lose", "LOSE");
     loseBtn.width = 0.2;
     loseBtn.height = "40px";
     loseBtn.color = "white";
     loseBtn.top = "-14px";
     loseBtn.thickness = 0;
-    loseBtn.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    loseBtn.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
     playerUI.addControl(loseBtn);
 
     loseBtn.onPointerDownObservable.add(() => {
@@ -188,8 +222,8 @@ class LibZero {
       scene.detachControl();
     });
 
-    let light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1,1,0), scene);
-    let sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 1 }, scene);
+    let light1 = new HemisphericLight("light1", new Vector3(1,1,0), scene);
+    let sphere = MeshBuilder.CreateSphere("sphere", { diameter: 1 }, scene);
 
     await scene.whenReadyAsync();
     this.#scene.dispose();
@@ -199,19 +233,34 @@ class LibZero {
     this.#scene.attachControl();
   }
 
-  #gotoLose() {
+  async #gotoLose() {
     console.log("gotoLose");
+    this.#engine.displayLoadingUI();
+
+    this.#scene.detachControl();
+    let scene = new Scene(this.#engine);
+    scene.clearColor = new Color4(0,0,0,1);
+    let camera = new FreeCamera("camera1", new Vector3(0,0,0), scene);
+    camera.setTarget(Vector3.Zero());
+
+    const guiMenu = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    const mainBtn = Button.CreateSimpleButton("mainmenu", "MAINMENU");
+    mainBtn.width = 0.2;
+    mainBtn.height = "40px";
+    mainBtn.color = "white";
+    guiMenu.addControl(mainBtn);
+    mainBtn.onPointerUpObservable.add(() => {
+      this.#gotoStart();
+    });
+
+    await scene.whenReadyAsync();
+    this.#engine.hideLoadingUI();
+    this.#scene.dispose();
+    this.#scene = scene;
+    this.#state = appstate.LOSE;
   }
 
 
-  async #setupGame() {
-    console.log("setupGame");
-    let scene = new BABYLON.Scene(this.#engine);
-    this.#gameScene = scene;
-
-    // ....load assets
-    
-  }
 
 
 
