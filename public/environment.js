@@ -18,7 +18,7 @@ export class Environment {
     
     this.#scene = scene;
     this.#lanternObjs = [];
-
+    this.#fireworkObjs = [];
     const lightmtl = new PBRMetallicRoughnessMaterial("lantern mesh light", this.#scene);
     lightmtl.emissiveTexture = new Texture("/textures/litLantern.png", this._scene, true, false);
     lightmtl.emissiveColor = new Color3(0.8784313725490196, 0.7568627450980392, 0.6235294117647059);
@@ -63,7 +63,7 @@ export class Environment {
       lanternInstance.setParent(lanternHolder);
 
       let animGroupClone = new AnimationGroup("lanternAnimGroup" + i);
-      animGroupCLone.addTargetAnimation(assets.animationGroups.targetedAnimations[0].animation, lanternInstance);
+      animGroupClone.addTargetedAnimation(assets.animationGroups.targetedAnimations[0].animation, lanternInstance);
 
       let newLantern = new Lantern(this.#lightmtl, lanternInstance, this.#scene, assets.env.getChildTransformNodes(false).find(m => m.name === "lantern " + i).getAbsolutePosition(), animGroupClone);
       this.#lanternObjs.push(newLantern);
@@ -101,7 +101,7 @@ export class Environment {
     animation.push(importedAnims[0].targetedAnimations[0].animation);
     importedAnims[0].dispose();
     let animGroup = new AnimationGroup("lanternAnimGroup");
-    animGroup.addTargetedAnimation(animation[0], res.meshed[1]);
+    animGroup.addTargetedAnimation(animation[0], res.meshes[1]);
 
     return {
       env: env,
@@ -156,7 +156,7 @@ class Firework {
   #explosionSfx;
   #rocketSfx;
 
-  constructor(scene) {
+  constructor(scene, i) {
     this.#scene = scene;
     const sphere = Mesh.CreateSphere("rocket", 4, 1, scene);
     sphere.isVisible = false;
@@ -165,7 +165,7 @@ class Firework {
     this.#emitter = sphere;
 
     let rocket = new ParticleSystem("rocket", 350, scene);
-    rocket.particleTexture = new Texture("./texture/flare.png", scene);
+    rocket.particleTexture = new Texture("./textures/flare.png", scene);
     rocket.emitter = sphere;
     rocket.emitRate = 20;
     rocket.minEmitBox = new Vector3(0, 0, 0);
